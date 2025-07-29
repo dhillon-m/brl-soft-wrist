@@ -1,7 +1,56 @@
+##############################
+# Import necessary libraries #
+##############################
+
 import serial
 import time
 import numpy as np
 
-import soft_wrist_lib
+import soft_wrist_lib as swl
 from cri.robot import SyncRobot, AsyncRobot
 from cri.controller import RTDEController
+
+np.set_printoptions(precision=2, suppress=True)
+
+
+
+################################
+# Setup wrist and hand control #
+################################
+
+# List available serial ports
+ports = serial.tools.list_ports.comports()
+for port in ports:
+    print(port.device)
+    
+# Open serial port
+ser = serial.Serial('COM4', baudrate=1000000, timeout=0.1)
+
+# Test wrist and hand movements
+swl.move_wrist(ser, flexion_extension=90, ulnar_radial=20)
+time.sleep(2)
+swl.close_hand(ser)
+time.sleep(2)
+swl.home_hand(ser)
+
+
+
+###############################
+# Setup UR5 coordinate frames #
+###############################
+
+base_frame = (0, 0, 0, 0, 0, 0)
+work_frame = (109.1, -487.0, 341.3, 180, 0, -90)   # base frame: x->right, y->back, z->up
+
+
+
+
+
+
+
+
+
+
+
+# Close the serial port
+ser.close()
