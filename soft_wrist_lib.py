@@ -1,11 +1,63 @@
+print("soft_wrist_lib.py loaded from", __file__)
+
 import time
 
 def checksum(packet):
     """
     Calculate the checksum for a given packet.
     :param packet: List of integers representing the packet
+    :return: Checksum value
     """
     return (~sum(packet[2:])) & 0xFF
+
+
+def read_servo_moving(ser, servo_id):
+    """
+    Check if a specific servo is currently moving.
+    :param ser: Open serial port
+    :param servo_id: ID of the servo to check
+    :return: True if the servo is moving, False if not, None if an error occurs
+    """
+    ser.reset_input_buffer()
+    packet = [0xFF, 0xFF, servo_id, 0x04, 0x02, 0x42, 0x01]
+    packet.append((~sum(packet[2:])) & 0xFF)
+    ser.write(bytearray(packet))
+    response = ser.read(7)
+    print(f"Moving response: {list(response)}")
+    if len(response) == 7 and response[0] == 0xFF and response[1] == 0xFF:
+        moving = response[5]
+        print("Moving status:", moving)
+        return moving == 1
+    return None
+
+
+def wait_for_servo(ser, servo_ids=[1, 2, 3, 4], check_interval=0.1, timeout=10):
+    """
+    Wait until all specified servos have stopped moving.
+    :param ser: Open serial port
+    :param servo_ids: List of servo IDs to check
+    :param check_interval: Time in seconds between checks
+    :param timeout: Maximum time to wait in seconds
+    :return: True if all servos are stopped, False if timeout
+    """
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        all_stopped = True
+        for servo_id in servo_ids:
+            moving = read_servo_moving(ser, servo_id)
+            if moving is None:
+                print(f"Error reading servo {servo_id}")
+                return False
+            if moving:
+                all_stopped = False
+        if all_stopped:
+            return True
+        time.sleep(check_interval)
+    
+    print("Timeout reached before all servos stopped.")
+    return False
+
 
 def move_servo(ser, servo_id, position):
     """
@@ -17,11 +69,12 @@ def move_servo(ser, servo_id, position):
     pos_l = position & 0xFF         # Low byte of position
     pos_h = (position >> 8) & 0xFF  # High byte of position
     
-    packet = [0xFF, 0xFF, servo_id, 5, 0x03, 0x2A, pos_l, pos_h]
+    packet = [0xFF, 0xFF, servo_id, 0x05, 0x03, 0x2A, pos_l, pos_h]
     packet.append(checksum(packet))
     
     ser.write(bytearray(packet))
-    
+
+
 def move_wrist(ser, flexion_angle, ulnar_angle):
     """
     Move the wrist to the specified positions.
@@ -50,7 +103,9 @@ def move_wrist(ser, flexion_angle, ulnar_angle):
     time.sleep(0.05)
     move_servo(ser, servo_id=4, position=ulnar_pos)
     time.sleep(0.05)
-    
+    wait_for_servo(ser, servo_ids=[1, 2, 3, 4])
+
+
 def close_hand(ser):
     """
     Close the hand.
@@ -60,21 +115,26 @@ def close_hand(ser):
     time.sleep(0.05)
     move_servo(ser, servo_id=3, position=2100)
     time.sleep(0.05)
+    wait_for_servo(ser, servo_ids=[1, 2, 3, 4])
+
 
 def open_hand(ser):
     """
     Open the hand.
     :param ser: Open serial port
     """
-    move_servo(ser, servo_id=2, position=700)
-    time.sleep(0.05)
     move_servo(ser, servo_id=3, position=1070)
     time.sleep(0.05)
-    
+    move_servo(ser, servo_id=2, position=700)
+    time.sleep(0.05)
+    wait_for_servo(ser, servo_ids=[1, 2, 3, 4])
+
+
 def home_hand(ser):
     """
     Move the hand to the home position.
     :param ser: Open serial port
     """
-    open_hand(ser)  # Open the hand
-    move_wrist(ser, flexion_angle=0, ulnar_angle=0)  # Reset wrist position
+    open_hand(ser)
+    move_wrist(ser, flexion_angle=0, ulnar_angle=0)
+    wait_for_servo(ser, servo_ids=[1, 2, 3, 4])

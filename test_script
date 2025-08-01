@@ -3,6 +3,7 @@
 ##############################
 
 import serial
+import serial.tools.list_ports
 import time
 import numpy as np
 
@@ -26,21 +27,32 @@ for port in ports:
 # Open serial port
 ser = serial.Serial('COM4', baudrate=1000000, timeout=0.1)
 
-# Test wrist and hand movements
-swl.move_wrist(ser, flexion_extension=90, ulnar_radial=20)
-time.sleep(2)
 swl.close_hand(ser)
-time.sleep(2)
+swl.move_wrist(ser, flexion_angle=0, ulnar_angle=45)
+swl.move_wrist(ser, flexion_angle=0, ulnar_angle=-45)
+swl.move_wrist(ser, flexion_angle=90, ulnar_angle=0)
+swl.move_wrist(ser, flexion_angle=-90, ulnar_angle=0)
 swl.home_hand(ser)
 
 
+# # Test wrist and hand movements
+# swl.move_wrist(ser, flexion_extension=90, ulnar_radial=20)
+# print("Wrist moved to flexion 90, ulnar radial 20")
+# time.sleep(2)
+# swl.close_hand(ser)
+# print("Hand closed")
+# time.sleep(2)
+# swl.home_hand(ser)
+# print("Hand homed")
 
-###############################
-# Setup UR5 coordinate frames #
-###############################
 
-base_frame = (0, 0, 0, 0, 0, 0)
-work_frame = (109.1, -487.0, 341.3, 180, 0, -90)   # base frame: x->right, y->back, z->up
+
+# ###############################
+# # Setup UR5 coordinate frames #
+# ###############################
+
+# base_frame = (0, 0, 0, 0, 0, 0)
+# work_frame = (109.1, -487.0, 341.3, 180, 0, -90)   # base frame: x->right, y->back, z->up
 
 
 
